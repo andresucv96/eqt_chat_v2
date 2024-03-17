@@ -8,12 +8,11 @@ from pinecone import Pinecone as pine
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from operator import itemgetter
-import os
 import chainlit as cl
-from dotenv import load_dotenv
 import config
 
 text_field = "content"  # the metadata field that contains our text
+
 
 def init_vectorstore():
     # initialize the vector store object
@@ -25,19 +24,27 @@ def init_vectorstore():
     )
     return vectorstore
 
-#set memory object with memory variables
-memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+# set memory object with memory variables
+memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True
+            )
+
 memory.load_memory_variables({})
 chat_memory = ChatMessageHistory()
 
-#create vectorstore object
+# create vectorstore object
 vectorstore = init_vectorstore()
 retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
 
 
 @cl.on_chat_start
 async def on_chat_start():
-    model = ChatOpenAI(streaming=True, model=config.OPENAI_COMPLETION_MODEL , openai_api_key=config.OPENAI_API_KEY)
+    model = ChatOpenAI(streaming=True,
+                       model=config.OPENAI_COMPLETION_MODEL,
+                       openai_api_key=config.OPENAI_API_KEY)
+
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -48,23 +55,24 @@ async def on_chat_start():
             ("human", "{question}"),
         ]
     )
+
     output_parser = StrOutputParser()
 
     chain = (
         {
-        "context": itemgetter("question") | retriever,
-        "question": itemgetter("question"),
-        "history": itemgetter("history")
+            "context": itemgetter("question") | retriever,
+            "question": itemgetter("question"),
+            "history": itemgetter("history")
         }
-        | prompt 
-        | model 
+        | prompt
+        | model
         | output_parser
     )
 
     chain_with_history = RunnableWithMessageHistory(
-        chain, 
+        chain,
         lambda session_id: chat_memory,
-        input_messages_key="question", 
+        input_messages_key="question",
         history_messages_key="history",
     )
 
@@ -78,16 +86,14 @@ async def on_message(message: cl.Message):
     msg = cl.Message(content="")
 
     for chunk in await cl.make_async(runnable.stream)(
-    {"question": message.content},
-    config={
-        'configurable': {
-            'session_id': 'chat_memory'
-        },
-        'callbacks': [cl.LangchainCallbackHandler()]
-    }
+        {"question": message.content},
+        config={
+            'configurable': {
+                'session_id': 'chat_memory'
+            },
+            'callbacks': [cl.LangchainCallbackHandler()]
+        }
     ):
         await msg.stream_token(chunk)
 
-
     await msg.send()
-
