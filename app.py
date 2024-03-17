@@ -18,18 +18,25 @@ def init_vectorstore():
     # initialize the vector store object
     pc = pine(api_key=config.PINECONE_API_KEY)
     index = pc.Index("diegoindex")
-    embed_model = OpenAIEmbeddings(model="text-embedding-ada-002", api_key=config.OPENAI_API_KEY)
+    embed_model = OpenAIEmbeddings(
+                    model="text-embedding-ada-002",
+                    api_key=config.OPENAI_API_KEY
+                )
+
     vectorstore = PineconeVectorStore(
-        index=index, embedding=embed_model, text_key=text_field
-    )
+                index=index,
+                embedding=embed_model,
+                text_key=text_field
+                )
+
     return vectorstore
 
 
 # set memory object with memory variables
 memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True
-            )
+                    memory_key="chat_history",
+                    return_messages=True
+                    )
 
 memory.load_memory_variables({})
 chat_memory = ChatMessageHistory()
@@ -48,7 +55,7 @@ async def on_chat_start():
     prompt = ChatPromptTemplate.from_messages(
         [
             (
-                "system", 
+                "system",
                 "you are a helpful chatbot that answer questions about the following context {context}"
             ),
             MessagesPlaceholder(variable_name="history"),
@@ -88,11 +95,9 @@ async def on_message(message: cl.Message):
     for chunk in await cl.make_async(runnable.stream)(
         {"question": message.content},
         config={
-            'configurable': {
-                'session_id': 'chat_memory'
-            },
+            'configurable': {'session_id': 'chat_memory'},
             'callbacks': [cl.LangchainCallbackHandler()]
-        }
+            }
     ):
         await msg.stream_token(chunk)
 
