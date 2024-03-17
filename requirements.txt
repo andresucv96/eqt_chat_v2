@@ -1,0 +1,7 @@
+langchain==0.1.11
+langchain-openai==0.0.8
+langchain-community==0.0.27
+python-dotenv==1.0.1
+chainlit==1.0.400
+pinecone-client==3.0.0
+langchain-pinecone==0.0.3
